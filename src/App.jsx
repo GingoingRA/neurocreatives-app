@@ -387,10 +387,14 @@ body { margin: 0; font-family: "Nunito Sans", sans-serif; transition: background
 .app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; }
 .content-flow { display: flex; flex-direction: column; }
 
-/* Two-column row: Codex TV on the left, active tab card on the right */
+/* Two-column row: Codex TV on the left, active tab card on the right.
+   Tab switcher + warnings/gates now live inside .tab-column too (not the
+   header), sharing the exact same width/center as the card beneath them. */
 .two-col { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; padding: 4px 28px 26px; }
-.tab-column { flex: 1; min-width: 320px; display: flex; }
-.tab-column > * { width: 100%; }
+.tab-column { flex: 1; min-width: 320px; display: flex; flex-direction: column; }
+.tab-column-inner { width: 100%; max-width: 760px; margin: 0 auto; box-sizing: border-box; }
+.tab-panel { width: 100%; max-width: 760px; margin: 0 auto; box-sizing: border-box; }
+.tab-switcher { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
 
 .news-rail { flex-shrink: 0; width: 400px; max-width: 100%; box-sizing: border-box; position: relative; z-index: 6; }
 .news-rail-title { font-size: 1rem; font-weight: 800; margin: 0 0 14px; }
@@ -423,7 +427,6 @@ body { margin: 0; font-family: "Nunito Sans", sans-serif; transition: background
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-logo { height: 34px; width: auto; border-radius: 8px; }
 .brand-name { font-weight: 800; font-size: 1.15rem; letter-spacing: 0.01em; }
-.tab-switcher { display: flex; gap: 10px; flex-wrap: wrap; }
 .tab-btn { border: none; padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 0.9rem; opacity: 0.6; background: rgba(0,0,0,0.06); transition: all 0.2s ease; }
 .tab-btn--active { opacity: 1; transform: translateY(-1px); }
 .connect-btn, .primary-btn, .secondary-btn { border: none; cursor: pointer; font-weight: 700; border-radius: 999px; padding: 12px 22px; font-size: 0.95rem; transition: transform 0.12s ease, box-shadow 0.12s ease; }
@@ -495,7 +498,7 @@ textarea { width: 100%; border-radius: 18px; border: 2px solid rgba(0,0,0,0.1); 
 .app--neuro .username-gate input { background: rgba(255,255,255,0.06); color: var(--ink); border-color: rgba(255,255,255,0.2); }
 .app--neuro .username-gate input:focus { outline: none; border-color: var(--cyan); }
 .neuro-tab { position: relative; padding: 20px 24px 60px; display: flex; justify-content: center; }
-.neuro-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 36px; max-width: 640px; width: 100%; backdrop-filter: blur(6px); position: relative; z-index: 4; }
+.neuro-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 36px; max-width: 760px; width: 100%; backdrop-filter: blur(6px); position: relative; z-index: 4; }
 .neuro-card h1 { font-size: 2.1rem; margin: 0 0 6px; color: var(--lime); }
 .neuro-subtitle { opacity: 0.75; margin-bottom: 20px; line-height: 1.5; }
 .neuro-result { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
@@ -522,7 +525,7 @@ textarea { width: 100%; border-radius: 18px; border: 2px solid rgba(0,0,0,0.1); 
 .app--github .username-gate input, .app--github .handle-input { background: white; border: 2px solid rgba(31,111,74,0.2); }
 .app--github .username-gate input:focus, .app--github textarea:focus, .app--github .handle-input:focus { outline: none; border-color: var(--primary); }
 .github-tab { position: relative; padding: 20px 24px 60px; display: flex; justify-content: center; }
-.github-card { background: white; border-radius: 24px; padding: 36px; max-width: 640px; width: 100%; box-shadow: 0 16px 40px rgba(31,111,74,0.14); position: relative; z-index: 4; border: 3px solid #dcebe0; }
+.github-card { background: white; border-radius: 24px; padding: 36px; max-width: 760px; width: 100%; box-shadow: 0 16px 40px rgba(31,111,74,0.14); position: relative; z-index: 4; border: 3px solid #dcebe0; }
 .github-card h1 { font-size: 2.1rem; margin: 0 0 6px; color: var(--primary); }
 .github-subtitle { opacity: 0.75; margin-bottom: 22px; line-height: 1.5; }
 .handle-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -621,22 +624,13 @@ function TxProgressBar({ stage, elapsedMs, onStopWatching }) {
   );
 }
 
-function Header({ tab, onTabChange, address, onConnect, connecting }) {
+function Header({ address, onConnect, connecting }) {
   return (
     <header className="site-header">
       <div className="brand">
         <img src="/genlayer-logo.jpg" alt="GenLayer" className="brand-logo" />
         <span className="brand-name">Neurocreatives</span>
       </div>
-
-      <nav className="tab-switcher">
-        <button className={tab === "neuro" ? "tab-btn tab-btn--active" : "tab-btn"} onClick={() => onTabChange("neuro")}>
-          🧠 Neurocreative Challenge
-        </button>
-        <button className={tab === "github" ? "tab-btn tab-btn--active" : "tab-btn"} onClick={() => onTabChange("github")}>
-          🐙 GenLayer Engagement
-        </button>
-      </nav>
 
       <div className="wallet-area">
         {address ? (
@@ -648,6 +642,19 @@ function Header({ tab, onTabChange, address, onConnect, connecting }) {
         )}
       </div>
     </header>
+  );
+}
+
+function TabSwitcher({ tab, onTabChange }) {
+  return (
+    <nav className="tab-switcher">
+      <button className={tab === "neuro" ? "tab-btn tab-btn--active" : "tab-btn"} onClick={() => onTabChange("neuro")}>
+        🧠 Neurocreative Challenge
+      </button>
+      <button className={tab === "github" ? "tab-btn tab-btn--active" : "tab-btn"} onClick={() => onTabChange("github")}>
+        🐙 GenLayer Engagement
+      </button>
+    </nav>
   );
 }
 
@@ -1348,56 +1355,52 @@ export default function App() {
       <style>{STYLES}</style>
 
       <div className="app-main">
-        <Header
-          tab={tab}
-          onTabChange={setTab}
-          address={address}
-          onConnect={handleConnect}
-          connecting={connecting}
-        />
-
-        <div className="content-flow">
-          {address && NETWORKS_SHARING_CHAIN_ID_4221.includes(NETWORK_NAME) && (
-            <p className="network-warning">
-              ⚠️ Connected for <strong>{NETWORK_NAME}</strong>. Asimov and Bradbury share the same
-              chain ID (4221) in your wallet — if you've used the other one before, check your
-              wallet's active network/RPC before signing, since your wallet can silently reuse the
-              wrong one.
-            </p>
-          )}
-
-          {!address && (
-            <div className="wallet-gate">
-              <p>Connect your wallet to submit content and GitHub profiles for evaluation.</p>
-            </div>
-          )}
-
-          {address && !username && (
-            <div className="username-gate">
-              <input
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Pick a username (2–30 chars)"
-                maxLength={30}
-              />
-              <button className="primary-btn" onClick={handleSetUsername} disabled={savingUsername}>
-                {savingUsername ? "Saving…" : "Save username"}
-              </button>
-            </div>
-          )}
-
-          {error && <p className="error-banner">{error}</p>}
-        </div>
+        <Header address={address} onConnect={handleConnect} connecting={connecting} />
 
         <div className="two-col">
           <CodexTV />
           <div className="tab-column">
+            <div className="tab-column-inner">
+              <TabSwitcher tab={tab} onTabChange={setTab} />
+
+              {address && NETWORKS_SHARING_CHAIN_ID_4221.includes(NETWORK_NAME) && (
+                <p className="network-warning">
+                  ⚠️ Connected for <strong>{NETWORK_NAME}</strong>. Asimov and Bradbury share the
+                  same chain ID (4221) in your wallet — if you've used the other one before, check
+                  your wallet's active network/RPC before signing, since your wallet can silently
+                  reuse the wrong one.
+                </p>
+              )}
+
+              {!address && (
+                <div className="wallet-gate">
+                  <p>Connect your wallet to submit content and GitHub profiles for evaluation.</p>
+                </div>
+              )}
+
+              {address && !username && (
+                <div className="username-gate">
+                  <input
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    placeholder="Pick a username (2–30 chars)"
+                    maxLength={30}
+                  />
+                  <button className="primary-btn" onClick={handleSetUsername} disabled={savingUsername}>
+                    {savingUsername ? "Saving…" : "Save username"}
+                  </button>
+                </div>
+              )}
+
+              {error && <p className="error-banner">{error}</p>}
+            </div>
+
             {address && username && (
               <>
-                <div style={{ display: tab === "neuro" ? "block" : "none", width: "100%" }}>
+                <div className="tab-panel" style={{ display: tab === "neuro" ? "block" : "none" }}>
                   <NeuroChallengeTab />
                 </div>
-                <div style={{ display: tab === "github" ? "block" : "none", width: "100%" }}>
+                <div className="tab-panel" style={{ display: tab === "github" ? "block" : "none" }}>
                   <GitHubEngagementTab />
                 </div>
               </>
