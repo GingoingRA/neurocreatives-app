@@ -511,6 +511,15 @@ textarea { width: 100%; border-radius: 18px; border: 2px solid rgba(0,0,0,0.1); 
 .verdict-text { margin: 0; white-space: pre-line; }
 .slop-flag { background: rgba(255,61,166,0.15); border: 1px solid rgba(255,61,166,0.4); color: #ffd2ea; padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; max-width: 480px; text-align: center; }
 .neuro-error { color: #ff7a9c; font-weight: 700; margin-top: 10px; }
+.content-url-input { width: 100%; border-radius: 999px; border: 2px solid rgba(0,0,0,0.1); padding: 14px 20px; font-family: inherit; font-size: 0.95rem; }
+.app--neuro .content-url-input { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.16); color: var(--ink); }
+.app--neuro .content-url-input:focus { outline: none; border-color: var(--cyan); }
+.url-hint { font-size: 0.78rem; opacity: 0.6; margin: 8px 0 0; }
+.source-url-link { display: block; font-size: 0.78rem; text-align: center; text-decoration: none; color: inherit; opacity: 0.75; margin-bottom: 6px; word-break: break-all; }
+.source-url-link:hover { opacity: 1; text-decoration: underline; }
+.verified-badge { display: inline-block; margin-left: 8px; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(78,205,196,0.18); color: #0b3b38; }
+.app--neuro .verified-badge { background: rgba(198,255,61,0.2); color: #c6ff3d; }
+.verified-badge--small { margin-left: 4px; padding: 0; background: none; font-size: 0.85rem; }
 .app--neuro .leaderboard-list { list-style: none; padding: 0; margin-top: 14px; text-align: left; }
 .app--neuro .leaderboard-list li { background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 12px; margin-bottom: 6px; }
 
@@ -528,9 +537,15 @@ textarea { width: 100%; border-radius: 18px; border: 2px solid rgba(0,0,0,0.1); 
 .github-card { background: white; border-radius: 24px; padding: 36px; max-width: 760px; width: 100%; box-shadow: 0 16px 40px rgba(31,111,74,0.14); position: relative; z-index: 4; border: 3px solid #dcebe0; }
 .github-card h1 { font-size: 2.1rem; margin: 0 0 6px; color: var(--primary); }
 .github-subtitle { opacity: 0.75; margin-bottom: 22px; line-height: 1.5; }
-.handle-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.handle-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .handle-input { flex: 1; min-width: 180px; border-radius: 999px; padding: 12px 18px; font-size: 1rem; font-family: inherit; }
 .handle-saved { font-size: 0.85rem; opacity: 0.7; margin: -10px 0 16px; }
+.verify-steps { background: rgba(31,111,74,0.06); border: 1px solid rgba(31,111,74,0.15); border-radius: 16px; padding: 16px 20px; margin-bottom: 20px; }
+.verify-steps-title { font-weight: 800; font-size: 0.85rem; margin: 0 0 8px; }
+.verify-steps ol { margin: 0; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; }
+.verify-steps li { margin-bottom: 8px; }
+.verify-steps a { color: var(--primary); font-weight: 700; }
+.wallet-to-paste { display: block; background: #1b2b22; color: #c6ff3d; padding: 8px 12px; border-radius: 8px; margin-top: 6px; font-size: 0.8rem; word-break: break-all; font-family: monospace; }
 .github-result { margin-top: 26px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
 .badge-hex { position: relative; width: 120px; height: 120px; min-width: 120px; border-radius: 50%; background: conic-gradient(var(--primary) calc(var(--score) * 1%), #e6efe8 0); display: flex; align-items: center; justify-content: center; }
 .badge-hex-inner { width: 84px; height: 84px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -781,7 +796,7 @@ const NEURO_STICKERS = [
 ];
 
 function NeuroChallengeTab() {
-  const [content, setContent] = useState("");
+  const [contentUrl, setContentUrl] = useState("");
   const [status, setStatus] = useState("idle"); // idle | evaluating | done
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -792,7 +807,7 @@ function NeuroChallengeTab() {
   const [showBoard, setShowBoard] = useState(false);
   const [loadingBoard, setLoadingBoard] = useState(false);
   const cancelTokenRef = useRef(null);
-  const submittedContentRef = useRef(""); // remembers what was submitted, for resume-after-refresh
+  const submittedUrlRef = useRef(""); // remembers what was submitted, for resume-after-refresh
 
   const busy = status === "evaluating";
   const onRetry = (attempt, max) =>
@@ -821,7 +836,7 @@ function NeuroChallengeTab() {
       const before = await readContractJSON("get_my_content_evaluations", []);
       const previousCount = before.submissions_made;
 
-      await writeContractTrackedWithLeaderRetry("submit_content_for_evaluation", [submittedContentRef.current], {
+      await writeContractTrackedWithLeaderRetry("submit_content_for_evaluation", [submittedUrlRef.current], {
         onRetry,
         cancelToken,
         resumeHash,
@@ -852,7 +867,7 @@ function NeuroChallengeTab() {
       if (found) {
         setResult(found.my_evaluations[found.my_evaluations.length - 1]);
         setStatus("done");
-        setContent("");
+        setContentUrl("");
       } else {
         setError(
           "The transaction succeeded but the result isn't showing up yet. Try reloading in a moment, or check the community leaderboard below."
@@ -886,13 +901,16 @@ function NeuroChallengeTab() {
     setResult(null);
     setTxStage(null);
     setTxElapsedMs(0);
-    if (content.trim().length < 20) {
-      setError("Write at least 20 characters about GenLayer to enter the challenge.");
+    const trimmedUrl = contentUrl.trim();
+    if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
+      setError(
+        "Enter a link to where this is actually published (a blog post, GitHub README, X/Twitter post, Mirror/Substack article, etc.) — the network fetches and grades the real page, not pasted text."
+      );
       return;
     }
 
     const walletAddress = getConnectedAddress();
-    submittedContentRef.current = content.trim();
+    submittedUrlRef.current = trimmedUrl;
     await runTrackedSubmission({ walletAddress });
   };
 
@@ -925,19 +943,24 @@ function NeuroChallengeTab() {
       <div className="neuro-card">
         <h1>Neurocreative Challenge</h1>
         <p className="neuro-subtitle">
-          Write something about GenLayer — an explainer, a pitch, a wild analogy. Validators
-          fact-check it against the protocol and hand back a 5-line verdict.
+          Write something about GenLayer and publish it somewhere public — a blog post, a
+          GitHub README, an X/Twitter post, a Mirror or Substack article. Paste the link
+          below and the network fetches the real page, fact-checks it against the
+          protocol, and hands back a 5-line verdict.
         </p>
 
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          maxLength={4000}
-          rows={7}
-          placeholder="e.g. Explain GenLayer's Equivalence Principle like you're pitching it to a room of skeptical bankers..."
+        <input
+          type="url"
+          className="content-url-input"
+          value={contentUrl}
+          onChange={(e) => setContentUrl(e.target.value)}
+          placeholder="https://your-blog.com/your-genlayer-post"
           disabled={busy}
         />
-        <div className="char-count">{content.length}/4000</div>
+        <p className="url-hint">
+          Must be a link to a real, public page — the contract fetches it directly, it
+          doesn't grade pasted text.
+        </p>
 
         <button className="primary-btn" onClick={handleSubmit} disabled={busy}>
           {busy ? (
@@ -965,6 +988,12 @@ function NeuroChallengeTab() {
 
         {result && (
           <div className="neuro-result">
+            {result.url && (
+              <a className="source-url-link" href={result.url} target="_blank" rel="noopener noreferrer">
+                🔗 Source: {result.url}
+                {result.author_verified && <span className="verified-badge">✅ Verified author</span>}
+              </a>
+            )}
             <div className="neuro-score-ring" style={{ "--score": result.score }}>
               <span>{result.score}</span>
             </div>
@@ -995,6 +1024,7 @@ function NeuroChallengeTab() {
             {leaderboard.submissions.slice(0, 5).map((it) => (
               <li key={it.id}>
                 <strong>{it.username}</strong> — {it.score}/100
+                {it.author_verified && <span className="verified-badge verified-badge--small">✅</span>}
               </li>
             ))}
             {leaderboard.submissions.length === 0 && <li>No submissions yet — be the first!</li>}
@@ -1020,7 +1050,9 @@ const GITHUB_STICKERS = [
 
 function GitHubEngagementTab() {
   const [handleInput, setHandleInput] = useState("");
+  const [gistUrlInput, setGistUrlInput] = useState("");
   const [handle, setHandle] = useState("");
+  const [verified, setVerified] = useState(false);
   const [savingHandle, setSavingHandle] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [profile, setProfile] = useState(null); // result of get_my_engagement
@@ -1032,6 +1064,7 @@ function GitHubEngagementTab() {
   const [showBoard, setShowBoard] = useState(false);
   const [loadingBoard, setLoadingBoard] = useState(false);
   const cancelTokenRef = useRef(null);
+  const walletAddressForGist = getConnectedAddress() || "";
 
   const onRetry = (attempt, max) =>
     setRetryNotice(`Node is busy right now — retrying (${attempt}/${max})…`);
@@ -1053,47 +1086,59 @@ function GitHubEngagementTab() {
       try {
         const mine = await readContractJSON("get_my_engagement", []);
         if (mine?.github_handle) setHandle(mine.github_handle);
+        setVerified(!!mine?.verified);
         if (mine?.evaluated) setProfile(mine);
       } catch (err) {
         console.warn("Could not load existing engagement profile:", err);
       }
     })();
 
-    const walletAddress = getConnectedAddress();
-    if (!walletAddress) return;
-    const pending = loadPendingTx(walletAddress, "evaluate_my_genlayer_engagement");
+    const pendingWallet = getConnectedAddress();
+    if (!pendingWallet) return;
+    const pending = loadPendingTx(pendingWallet, "evaluate_my_genlayer_engagement");
     if (pending?.hash) {
-      runTrackedEvaluate({ resumeHash: pending.hash, walletAddress });
+      runTrackedEvaluate({ resumeHash: pending.hash, walletAddress: pendingWallet });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSaveHandle = async () => {
-    const trimmed = handleInput.trim();
-    if (!trimmed) return;
+  const handleVerifyHandle = async () => {
+    const trimmedHandle = handleInput.trim();
+    const trimmedGist = gistUrlInput.trim();
+    if (!trimmedHandle || !trimmedGist) {
+      setError("Enter both your GitHub handle and the gist URL.");
+      return;
+    }
     setError("");
     setSavingHandle(true);
     try {
-      await writeContract("set_github_handle", [trimmed], { ...QUICK_WAIT_OPTIONS, onRetry });
+      await writeContract("verify_github_handle", [trimmedHandle, trimmedGist], {
+        ...QUICK_WAIT_OPTIONS,
+        onRetry,
+      });
       setRetryNotice("");
-      setHandle(trimmed);
+      setHandle(trimmedHandle);
+      setVerified(true);
       setHandleInput("");
+      setGistUrlInput("");
       setProfile(null); // stale until re-evaluated
     } catch (err) {
       if (isTimeoutError(err)) {
         setError("Still confirming — checking…");
         const landed = await pollUntilReady(
           () => readContractJSON("get_my_engagement", []),
-          (mine) => mine.github_handle === trimmed,
+          (mine) => mine.github_handle === trimmedHandle && mine.verified,
           { attempts: 6, delay: 5000 }
         );
         if (landed) {
-          setHandle(trimmed);
+          setHandle(trimmedHandle);
+          setVerified(true);
           setHandleInput("");
+          setGistUrlInput("");
           setProfile(null);
           setError("");
         } else {
-          setError("Saving the handle didn't confirm in time. Please try again.");
+          setError("Verification didn't confirm in time. Please try again.");
         }
       } else {
         setError(err.message || String(err));
@@ -1190,26 +1235,66 @@ function GitHubEngagementTab() {
       <div className="github-card">
         <h1>GenLayer Engagement</h1>
         <p className="github-subtitle">
-          Link your GitHub handle and the network checks how deep your GenLayer engagement
-          really is — bio mentions, related repos, real contributions — then hands you a
-          tier badge.
+          Prove you actually own a GitHub handle — not just claim one — then the network
+          checks how deep your GenLayer engagement is: bio mentions, related repos, real
+          contributions. Verified profiles get a tier badge on the public leaderboard.
         </p>
+
+        {!verified && (
+          <div className="verify-steps">
+            <p className="verify-steps-title">To verify, in order:</p>
+            <ol>
+              <li>
+                Create a new{" "}
+                <a href="https://gist.github.com/new" target="_blank" rel="noopener noreferrer">
+                  GitHub Gist
+                </a>{" "}
+                (any filename, content can be anything) while logged into the GitHub account
+                you want to link.
+              </li>
+              <li>
+                Paste this exact line somewhere in the gist — it's your connected wallet
+                address, and it's what proves <em>you</em> made this gist, not someone else:
+                <code className="wallet-to-paste">{walletAddressForGist || "connect your wallet first"}</code>
+              </li>
+              <li>Save the gist, then copy its URL and paste it below along with your handle.</li>
+            </ol>
+          </div>
+        )}
 
         <div className="handle-row">
           <input
             className="handle-input"
             value={handleInput}
             onChange={(e) => setHandleInput(e.target.value)}
-            placeholder={handle ? `Update handle (current: ${handle})` : "your-github-handle"}
+            placeholder="your-github-handle"
             maxLength={39}
           />
-          <button className="primary-btn" onClick={handleSaveHandle} disabled={savingHandle}>
-            {savingHandle ? "Saving…" : "Save handle"}
+        </div>
+        <div className="handle-row">
+          <input
+            className="handle-input"
+            value={gistUrlInput}
+            onChange={(e) => setGistUrlInput(e.target.value)}
+            placeholder="https://gist.github.com/your-handle/..."
+          />
+          <button className="primary-btn" onClick={handleVerifyHandle} disabled={savingHandle}>
+            {savingHandle ? "Verifying…" : "Verify handle"}
           </button>
         </div>
-        {handle && <p className="handle-saved">Linked handle: @{handle}</p>}
 
-        <button className="primary-btn" onClick={handleEvaluate} disabled={evaluating || !handle}>
+        {handle && (
+          <p className="handle-saved">
+            {verified ? "✅ Verified: " : "Linked (unverified): "}@{handle}
+          </p>
+        )}
+
+        <button
+          className="primary-btn"
+          onClick={handleEvaluate}
+          disabled={evaluating || !handle || !verified}
+          title={!verified ? "Verify your handle first" : undefined}
+        >
           {evaluating ? (
             <>
               Checking GitHub + scoring<span className="loading-dots"></span>
@@ -1262,7 +1347,8 @@ function GitHubEngagementTab() {
           <ol className="leaderboard">
             {leaderboard.profiles.slice(0, 5).map((p, i) => (
               <li key={i}>
-                <strong>{p.username}</strong> (@{p.github_handle}) — {p.score}/100 · {p.tier}
+                <strong>{p.username}</strong> (@{p.github_handle}
+                {p.verified ? " ✅" : ""}) — {p.score}/100 · {p.tier}
               </li>
             ))}
             {leaderboard.profiles.length === 0 && <li>No profiles checked yet — be the first!</li>}
